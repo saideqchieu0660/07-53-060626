@@ -46,6 +46,7 @@ const QuizCooldownTimer = ({ user }: any) => {
 };
 
 import { useSound } from "../hooks/useSound";
+import { TopPerformersWidget, getTier } from "../components/TopPerformersWidget";
 import { triggerCelebration } from "../lib/celebration";
 
 function AnimatedCounter({ value }: { value: number }) {
@@ -441,14 +442,6 @@ export default function StudentDashboard() {
          rankCelebratedRef.current = false;
      }
   }, [sortedUsers, user?.id]);
-
-  const getTier = (points: number) => {
-      if (points >= 100) return { name: "Grandmaster", color: "text-purple-500 bg-purple-500/10 border-purple-500/30", gradient: "from-purple-500 to-fuchsia-600", icon: <Crown className="w-3 h-3" /> };
-      if (points >= 50) return { name: "Diamond", color: "text-cyan-500 bg-cyan-500/10 border-cyan-500/30", gradient: "from-cyan-400 to-blue-500", icon: <Sparkles className="w-3 h-3" /> };
-      if (points >= 20) return { name: "Gold", color: "text-yellow-500 bg-yellow-500/10 border-yellow-500/30", gradient: "from-yellow-400 to-amber-600", icon: <Trophy className="w-3 h-3" /> };
-      if (points >= 10) return { name: "Silver", color: "text-gray-400 bg-gray-400/10 border-gray-400/30", gradient: "from-gray-300 to-gray-500", icon: <Award className="w-3 h-3" /> };
-      return { name: "Bronze", color: "text-orange-500 bg-orange-500/10 border-orange-500/30", gradient: "from-orange-400 to-red-500", icon: <Shield className="w-3 h-3" /> };
-  };
 
   
   const [groupId, setGroupId] = useState("");
@@ -1769,22 +1762,12 @@ export default function StudentDashboard() {
               </div>
             </section>
 
-            <section className="glass p-6 rounded-xl">
-              <h3 className="text-xl font-display font-bold text-transparent bg-clip-text bg-gradient-to-r from-amber-700 via-amber-500 to-yellow-600 dark:from-amber-200 dark:via-yellow-400 dark:to-amber-500 mb-4 flex items-center gap-2">
-                <MarcusAureliusIcon className="w-5 h-5 text-yellow-500" /> Leaderboard
-              </h3>
-              <div className="space-y-3">
-                {sortedUsers.slice(0, 5).map((u, i) => (
-                  <div key={u.id} className={cn("flex justify-between items-center p-2 rounded-lg", u.id === user?.id ? "bg-yellow-500/10 border border-yellow-500/20" : "")}>
-                    <div className="flex items-center gap-3">
-                      <span className={cn("font-bold font-mono text-sm", i === 0 ? "text-yellow-500" : "opacity-50")}>#{i + 1}</span>
-                      <span className="font-medium truncate max-w-[120px]">{u.name}</span>
-                    </div>
-                    <span className="font-mono text-sm opacity-70 font-bold">{u.points} pts</span>
-                  </div>
-                ))}
-              </div>
-            </section>
+            <TopPerformersWidget 
+              users={sortedUsers.slice(0, 3)} 
+              currentUserId={user?.id} 
+              rankTrends={rankTrends} 
+              onUserClick={setSelectedUserProfile} 
+            />
             
             <QuickNotes />
           </aside>

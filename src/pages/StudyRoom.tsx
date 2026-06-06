@@ -1363,7 +1363,7 @@ export default function StudyRoom() {
           transition={{ type: "spring", stiffness: 220, damping: 25, mass: 1 }}
         >
           {/* Front */}
-          <div className="absolute inset-0 backface-hidden glass rounded-3xl text-center h-full overflow-y-auto">
+          <div className="absolute inset-0 backface-hidden bg-white dark:bg-zinc-900 border border-stone-200/50 dark:border-zinc-800/50 shadow-xl rounded-3xl text-center h-full overflow-y-auto transform-gpu">
             <div className="w-full min-h-full flex flex-col items-center justify-center p-8">
               {user?.role === "teacher" && !isEditing && (
                  <button onClick={handleEditOpen} className="absolute top-4 right-4 z-20 p-2 bg-stone-300/60 dark:bg-zinc-800/80 rounded-full hover:bg-black/20 dark:hover:bg-white/20 transition">
@@ -1418,8 +1418,8 @@ export default function StudyRoom() {
             </div>
           </div>
           {/* Back */}
-          <div className="absolute inset-0 backface-hidden [transform:rotateY(180deg)] glass rounded-3xl text-center h-full overflow-y-auto">
-            <div className="w-full min-h-full flex flex-col items-center justify-center p-8 text-lg opacity-80">
+          <div className="absolute inset-0 backface-hidden [transform:rotateY(180deg)] bg-white dark:bg-zinc-900 border border-stone-200/50 dark:border-zinc-800/50 shadow-xl rounded-3xl text-center h-full overflow-y-auto transform-gpu">
+            <div className="w-full min-h-full flex flex-col items-center justify-center p-8 text-lg opacity-90">
               {user?.role === "teacher" && !isEditing && (
                  <button onClick={handleEditOpen} className="absolute top-4 right-4 z-20 p-2 bg-stone-300/60 dark:bg-zinc-800/80 rounded-full hover:bg-black/20 dark:hover:bg-white/20 transition">
                    <Edit3 className="w-5 h-5 text-blue-500" />

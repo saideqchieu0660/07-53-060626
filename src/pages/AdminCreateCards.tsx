@@ -100,33 +100,66 @@ export default function AdminCreateCards() {
     setSuccessMsg("");
 
     try {
+      // Bổ sung các mandatory fields cứng vào payload trước khi gửi để tránh Firestore Rules thả lỗi
+      const adminUid = store.getCurrentUser()?.id || "";
+      const targetDeckId = selectedDeckId === "new" ? `deck_${uuidv4()}` : selectedDeckId;
+      const now = Date.now();
+
+      const enrichedBatchCards = batchCards.map(card => ({
+         ...card,
+         deckId: targetDeckId,
+         uid: adminUid,
+         createdAt: now,
+         updatedAt: now,
+         isReviewing: false,
+      }));
+
+      const safeBatchCards = JSON.parse(JSON.stringify(enrichedBatchCards)); // Drop any undefined fields
+
       if (selectedDeckId === "new") {
-         const newDeckId = `deck_${uuidv4()}`;
          const newDeck: Deck = {
-           id: newDeckId,
+           id: targetDeckId,
            title: newDeckTitle.trim(),
            subject: newDeckSubject.trim() || "general",
-           cards: batchCards
+           cards: safeBatchCards
          };
          
-         await setDoc(doc(db, "sets", newDeckId), newDeck);
+         await setDoc(doc(db, "sets", targetDeckId), newDeck);
          
          // Update local store
          store.addDeck(newDeck);
          setDecks(store.getDecks());
-         setSelectedDeckId(newDeckId);
+         setSelectedDeckId(targetDeckId);
          setNewDeckTitle("");
          setNewDeckSubject("");
       } else {
          const deckRef = doc(db, "sets", selectedDeckId);
-         await updateDoc(deckRef, {
-             cards: arrayUnion(...batchCards)
-         });
+         const snap = await getDoc(deckRef);
+         
+         if (!snap.exists()) {
+             // Deck is likely a local mock that hasn't been saved to firestore yet
+             const localDeck = store.getDecks().find(d => d.id === selectedDeckId);
+             if (localDeck) {
+                 const fullDeckObj = {
+                     id: localDeck.id,
+                     title: localDeck.title,
+                     subject: localDeck.subject,
+                     cards: [...(localDeck.cards || []), ...safeBatchCards]
+                 };
+                 await setDoc(deckRef, fullDeckObj);
+             } else {
+                 throw new Error("Không tìm thấy dữ liệu bộ bài gốc");
+             }
+         } else {
+             await updateDoc(deckRef, {
+                 cards: arrayUnion(...safeBatchCards)
+             });
+         }
          
          // Fetch and update local store
-         const snap = await getDoc(deckRef);
-         if (snap.exists()) {
-             const updatedDeck = snap.data() as Deck;
+         const snapAfter = await getDoc(deckRef);
+         if (snapAfter.exists()) {
+             const updatedDeck = snapAfter.data() as Deck;
              const existingIdx = decks.findIndex(d => d.id === selectedDeckId);
              if (existingIdx !== -1) {
                  store.setDecksLocally([
@@ -143,8 +176,12 @@ export default function AdminCreateCards() {
       setBatchCards([]);
       setTimeout(() => setSuccessMsg(""), 4000);
     } catch (err: any) {
-      console.error("Save Card Error Details:", err);
-      alert(`Có lỗi xảy ra khi lưu thẻ: ${err.message || "Lỗi không xác định"}. Vui lòng thử lại!`);
+      console.error("Save Card Error Details (Full error):", err, typeof err, err.code, err.message);
+      if (err && typeof err === 'object' && err.message) {
+         alert(`Có lỗi xảy ra khi lưu thẻ: ${err.code} - ${err.message}. Vui lòng thử lại!`);
+      } else {
+         alert(`Có lỗi xảy ra khi lưu thẻ: ${JSON.stringify(err)}. Vui lòng thử lại!`);
+      }
     } finally {
       setIsSaving(false);
     }
