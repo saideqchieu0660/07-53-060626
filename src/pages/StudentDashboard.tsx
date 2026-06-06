@@ -23,7 +23,28 @@ import { QuickNotes } from "../components/QuickNotes";
 
 import { DeckList } from "../components/DeckList";
 import { ErrorBoundary } from "../components/ErrorBoundary";
-import { useAICooldown } from "../lib/cooldown";
+import { useAICooldown, triggerAICooldown } from "../lib/cooldown";
+
+const MockExamButton = ({ user, onClick }: any) => {
+  const { cooldownRemaining } = useAICooldown(user);
+  return (
+    <button 
+      onClick={onClick} 
+      disabled={cooldownRemaining > 0} 
+      className={cn("px-4 py-2 rounded-lg font-bold flex items-center gap-2 shadow-lg transition transform", cooldownRemaining > 0 ? "bg-stone-300/60 dark:bg-zinc-800/80 text-black/50 dark:text-white/50 cursor-not-allowed" : "relative overflow-hidden group bg-yellow-500 hover:bg-yellow-600 text-black shadow-lg hover:scale-[1.02] transition-all duration-500 font-bold before:absolute before:inset-0 before:bg-gradient-to-r before:from-transparent before:via-white/50 before:to-transparent before:-translate-x-full hover:before:translate-x-full before:transition-transform before:duration-700")}
+    >
+      <BrainCircuit className="w-5 h-5" />
+      {cooldownRemaining > 0 ? `Đang hồi chiêu (${cooldownRemaining}s)` : "Sinh Bài Thi (Mock Exam)"}
+    </button>
+  );
+};
+
+const QuizCooldownTimer = ({ user }: any) => {
+  const { cooldownRemaining } = useAICooldown(user);
+  if (cooldownRemaining <= 0) return null;
+  return <span>Cooldown: {cooldownRemaining}s</span>;
+};
+
 import { useSound } from "../hooks/useSound";
 import { triggerCelebration } from "../lib/celebration";
 
@@ -514,13 +535,20 @@ export default function StudentDashboard() {
   // -------------------------------------
   
   const [showRemindLaterModal, setShowRemindLaterModal] = useState(false);
-  const remindLaterCardIds = (() => {
-    try {
-      return JSON.parse(localStorage.getItem("remind_later_items") || "[]") as string[];
-    } catch {
-      return [];
-    }
-  })();
+  const [remindLaterCardIds, setRemindLaterCardIds] = useState<string[]>([]);
+  
+  useEffect(() => {
+    const fetchReminders = () => {
+       try {
+         setRemindLaterCardIds(JSON.parse(localStorage.getItem("remind_later_items") || "[]") as string[]);
+       } catch {
+         setRemindLaterCardIds([]);
+       }
+    };
+    fetchReminders();
+    window.addEventListener("focus", fetchReminders);
+    return () => window.removeEventListener("focus", fetchReminders);
+  }, []);
   
   const remindLaterCount = remindLaterCardIds.length;
   
@@ -634,7 +662,6 @@ export default function StudentDashboard() {
 
   
   // Quiz states
-  const { cooldownRemaining, startCooldown } = useAICooldown(user);
   const [isQuizLoading, setIsQuizLoading] = useState(false);
   const [quizQuestions, setQuizQuestions] = useState<QuizQuestion[]>([]);
   const [quizCurrentIndex, setQuizCurrentIndex] = useState(0);
@@ -650,8 +677,7 @@ export default function StudentDashboard() {
   const [examQuestionCount, setExamQuestionCount] = useState<number>(10);
 
   const triggerQuiz = async () => {
-      if (cooldownRemaining > 0) return;
-      
+      // Logic for checking cooldown is moved entirely to the start phase inside the new function:
       const allDecks = store.getDecks();
       let weakCards: any[] = [];
       for (const deck of allDecks) {
@@ -670,7 +696,7 @@ export default function StudentDashboard() {
       }
 
       if (user && user.role === "student") {
-        startCooldown();
+        triggerAICooldown(user);
       }
       setIsQuizLoading(true);
       setActiveTab("quiz");
@@ -753,7 +779,7 @@ export default function StudentDashboard() {
       const targetDecks = allDecks.filter(d => selectedExamDecks.includes(d.id));
       
       if (user && user.role === "student") {
-        startCooldown();
+        triggerAICooldown(user);
       }
       setIsQuizLoading(true);
       setActiveTab("quiz");
@@ -1050,14 +1076,7 @@ export default function StudentDashboard() {
               {user?.streakFreeze ? "Đã Kích Hoạt" : "Trang Bị (50 pts)"}
             </button>
 
-            <button 
-                onClick={() => setActiveTab("mock_exam_setup")} 
-                disabled={cooldownRemaining > 0} 
-                className={cn("px-4 py-2 rounded-lg font-bold flex items-center gap-2 shadow-lg transition transform", cooldownRemaining > 0 ? "bg-stone-300/60 dark:bg-zinc-800/80 text-black/50 dark:text-white/50 cursor-not-allowed" : "relative overflow-hidden group bg-yellow-500 hover:bg-yellow-600 text-black shadow-lg hover:scale-[1.02] transition-all duration-500 font-bold before:absolute before:inset-0 before:bg-gradient-to-r before:from-transparent before:via-white/50 before:to-transparent before:-translate-x-full hover:before:translate-x-full before:transition-transform before:duration-700")}
-            >
-              <BrainCircuit className="w-5 h-5" />
-              {cooldownRemaining > 0 ? `Đang hồi chiêu (${cooldownRemaining}s)` : "Sinh Bài Thi (Mock Exam)"}
-            </button>
+            <MockExamButton user={user} onClick={() => setActiveTab("mock_exam_setup")} />
           </div>
         </div>
       </motion.section>
@@ -1144,7 +1163,7 @@ export default function StudentDashboard() {
                      <h2 className="text-3xl font-display font-bold text-transparent bg-clip-text bg-gradient-to-r from-amber-700 via-amber-500 to-yellow-600 dark:from-amber-200 dark:via-yellow-400 dark:to-amber-500 text-transparent bg-clip-text bg-gradient-to-r from-amber-700 via-amber-500 to-yellow-600 dark:from-amber-200 dark:via-yellow-400 dark:to-amber-500 text-yellow-600 dark:text-yellow-400">Đang khởi tạo bài kiểm tra năng lực...</h2>
                      <p className="opacity-70 max-w-lg italic font-serif">Chuyên gia khảo thí AI đang phân tích dữ liệu hổng kiến thức của bạn để tạo 15 câu trắc nghiệm thực chiến.</p>
                      <div className="font-mono text-xl bg-stone-200/60 dark:bg-zinc-800/50 px-6 py-2 rounded-full border border-amber-600/20 dark:border-amber-500/30 font-bold text-yellow-600">
-                         Cooldown: {cooldownRemaining}s
+                         <QuizCooldownTimer user={user} />
                      </div>
                  </div>
              ) : quizFinished ? (

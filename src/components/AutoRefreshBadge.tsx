@@ -5,6 +5,7 @@ import { cn } from "../lib/utils";
 export function AutoRefreshBadge() {
   const [timeLeft, setTimeLeft] = useState<number | null>(null);
   const [isDisabled, setIsDisabled] = useState(false);
+  const [isRefreshing, setIsRefreshing] = useState(false);
 
   useEffect(() => {
     // Initial calculation
@@ -18,9 +19,6 @@ export function AutoRefreshBadge() {
        setIsDisabled(false);
        const intervalMins = parseInt(updateSetting, 10);
        
-       // To sync globally, we could use the start of the current hour/minute as an epoch,
-       // but for simplicity we'll just track from when this component mounts, OR read from a shared global.
-       // Since the service worker uses Date.now() when it starts, let's just use localStorage to track the exact target time.
        let targetTime = localStorage.getItem("autoUpdateTargetTime");
        const now = Date.now();
        
@@ -39,6 +37,7 @@ export function AutoRefreshBadge() {
     }
 
     const interval = setInterval(() => {
+       if (isRefreshing) return;
        const updateSetting = localStorage.getItem("autoUpdateInterval") || "10";
        if (updateSetting === "disabled") {
          setIsDisabled(true);
@@ -58,23 +57,52 @@ export function AutoRefreshBadge() {
           localStorage.setItem("autoUpdateTargetTime", nextTarget.toString());
           targetTime = nextTarget.toString();
           
-          // Trigger the SW check manually (since the SW itself is a bit isolated)
-          if ('serviceWorker' in navigator) {
-             navigator.serviceWorker.ready.then(reg => {
-                reg.update().catch(err => {
-                   console.warn('[AutoRefresh] ServiceWorker update failed, continuing...');
-                });
-             }).catch(err => {
-                console.warn('[AutoRefresh] ServiceWorker ready failed');
-             });
-          }
+          handlePerformRefresh();
        }
        
        setTimeLeft(Math.max(0, parseInt(targetTime, 10) - Date.now()));
     }, 1000);
 
     return () => clearInterval(interval);
-  }, []);
+  }, [isRefreshing]);
+
+  const handlePerformRefresh = async () => {
+      setIsRefreshing(true);
+      // Ensure target time is reset
+      const updateSetting = localStorage.getItem("autoUpdateInterval") || "10";
+      if (updateSetting !== "disabled") {
+         const intervalMins = parseInt(updateSetting, 10);
+         const nextTarget = Date.now() + intervalMins * 60 * 1000;
+         localStorage.setItem("autoUpdateTargetTime", nextTarget.toString());
+         setTimeLeft(intervalMins * 60 * 1000);
+      }
+
+      // 1. Force SW update
+      if ('serviceWorker' in navigator) {
+         try {
+            const reg = await navigator.serviceWorker.ready;
+            await reg.update();
+         } catch (err) {
+            console.warn('[AutoRefresh] ServiceWorker update failed');
+         }
+      }
+      
+      // 2. Fetch cache busted root to ensure we get newest content layer
+      try {
+         await fetch('/?v=' + Date.now(), { cache: 'no-store', method: 'HEAD' });
+      } catch (e) {
+         // ignore network errors on ping
+      }
+      
+      // 3. Force FireStore hooks and UI real-time components to resync
+      window.dispatchEvent(new CustomEvent('app-network-reconnect'));
+      window.dispatchEvent(new CustomEvent('app-manual-refresh'));
+      
+      // Visual feedback wait
+      setTimeout(() => {
+          setIsRefreshing(false);
+      }, 800);
+  };
 
   if (isDisabled) return null;
 
@@ -82,9 +110,17 @@ export function AutoRefreshBadge() {
   const s = timeLeft !== null ? Math.floor((timeLeft % 60000) / 1000) : 0;
 
   return (
-    <div className="flex items-center gap-2 bg-stone-100/80 dark:bg-zinc-900/80 backdrop-blur border border-stone-200 dark:border-zinc-800 px-3 py-1.5 rounded-full shadow-sm" title="Tự động đồng bộ & cập nhật phiên bản">
+    <button 
+       onClick={handlePerformRefresh}
+       disabled={isRefreshing}
+       className={cn(
+           "flex items-center gap-2 bg-stone-100/80 dark:bg-zinc-900/80 backdrop-blur border px-3 py-1.5 rounded-full shadow-sm transition-all outline-none cursor-pointer active:scale-95 hover:bg-stone-200/80 dark:hover:bg-zinc-800/80",
+           isRefreshing ? "border-amber-500/50" : "border-stone-200 dark:border-zinc-800"
+       )} 
+       title="Tự động đồng bộ & cập nhật phiên bản (Bấm để làm mới ngay)"
+    >
        <span className="relative flex h-2.5 w-2.5">
-          {timeLeft && timeLeft < 10000 ? (
+          {timeLeft && timeLeft < 10000 || isRefreshing ? (
             <>
               <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
               <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-red-500"></span>
@@ -96,10 +132,10 @@ export function AutoRefreshBadge() {
             </>
           )}
        </span>
-       <span className="text-[10px] font-mono font-bold text-stone-600 dark:text-stone-400 tracking-wider flex items-center gap-1.5">
-          <RefreshCw className={cn("w-3 h-3", timeLeft && timeLeft < 10000 ? "animate-spin text-red-500" : "")} />
-          {timeLeft === null ? "--:--" : `${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`}
+       <span className="text-[10px] font-mono font-bold text-stone-600 dark:text-stone-400 tracking-wider flex items-center gap-1.5 min-w-[40px] justify-center">
+          <RefreshCw className={cn("w-3 h-3 text-stone-500 dark:text-stone-400", (isRefreshing || (timeLeft && timeLeft < 10000)) ? "animate-spin" : "")} />
+          {isRefreshing ? "--:--" : (timeLeft === null ? "--:--" : `${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`)}
        </span>
-    </div>
+    </button>
   );
 }

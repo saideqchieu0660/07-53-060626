@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
-import { Plus, Save, Trash2, ChevronLeft, Layers, Type, Speech, BookOpen, BrainCircuit } from "lucide-react";
+import { Plus, Save, Trash2, ChevronLeft, Layers, Type, Speech, BookOpen, BrainCircuit, Edit3 } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
 import { v4 as uuidv4 } from "uuid";
 import { store, Flashcard, Deck } from "../lib/store";
@@ -25,6 +25,11 @@ export default function AdminCreateCards() {
   
   // local batch
   const [batchCards, setBatchCards] = useState<Flashcard[]>([]);
+  const [editingBatchCardId, setEditingBatchCardId] = useState<string | null>(null);
+
+  const handleUpdateBatchCard = (id: string, field: keyof Flashcard, value: string) => {
+    setBatchCards(prev => prev.map(c => c.id === id ? { ...c, [field]: value } : c));
+  };
   
   // UI States
   const [isSaving, setIsSaving] = useState(false);
@@ -314,19 +319,63 @@ export default function AdminCreateCards() {
                              initial={{ opacity: 0, x: 20 }}
                              animate={{ opacity: 1, x: 0 }}
                              exit={{ opacity: 0, scale: 0.9 }}
-                             className="p-4 bg-white/50 dark:bg-zinc-900/50 border border-stone-200 dark:border-zinc-800 rounded-2xl group flex justify-between items-start gap-3"
+                             className="p-4 bg-white/50 dark:bg-zinc-900/50 border border-stone-200 dark:border-zinc-800 rounded-2xl group flex flex-col gap-3"
                           >
-                             <div className="flex-1 min-w-0">
-                                <div className="text-xs font-bold opacity-40 mb-1"># {idx + 1}</div>
-                                <h4 className="font-bold line-clamp-1 text-sm">{card.front} {card.wordForm && <span className="opacity-50 font-normal italic">({card.wordForm})</span>}</h4>
-                                <p className="text-xs opacity-70 line-clamp-2 mt-1">{card.back}</p>
-                             </div>
-                             <button 
-                               onClick={() => handleRemoveFromBatch(card.id)}
-                               className="p-2 bg-red-500/10 text-red-500 hover:bg-red-500 hover:text-white rounded-lg transition opacity-0 group-hover:opacity-100 focus:opacity-100 flex-shrink-0"
-                             >
-                                <Trash2 className="w-4 h-4" />
-                             </button>
+                             {editingBatchCardId === card.id ? (
+                                <div className="space-y-2 w-full animate-in fade-in zoom-in-95 duration-200">
+                                    <input 
+                                      className="w-full text-sm p-3 bg-white dark:bg-zinc-950 border border-stone-200/50 dark:border-zinc-700/50 shadow-inner rounded-lg outline-none focus:ring-1 focus:ring-amber-500 transition" 
+                                      value={card.front}
+                                      onChange={(e) => handleUpdateBatchCard(card.id, 'front', e.target.value)}
+                                      placeholder="Mặt trước (Từ / Khái niệm)"
+                                    />
+                                    <input 
+                                      className="w-full text-xs p-3 bg-white dark:bg-zinc-950 border border-stone-200/50 dark:border-zinc-700/50 shadow-inner rounded-lg outline-none focus:ring-1 focus:ring-amber-500 transition font-mono" 
+                                      value={card.wordForm || ""}
+                                      onChange={(e) => handleUpdateBatchCard(card.id, 'wordForm', e.target.value)}
+                                      placeholder="Từ loại / Phát âm"
+                                    />
+                                    <textarea 
+                                      className="w-full text-sm p-3 bg-white dark:bg-zinc-950 border border-stone-200/50 dark:border-zinc-700/50 shadow-inner rounded-lg outline-none focus:ring-1 focus:ring-amber-500 transition resize-none leading-relaxed" 
+                                      value={card.back}
+                                      onChange={(e) => handleUpdateBatchCard(card.id, 'back', e.target.value)}
+                                      placeholder="Mặt sau (Nghĩa / Lời giải)"
+                                      rows={3}
+                                    />
+                                    <div className="flex justify-end mt-2">
+                                       <button 
+                                         onClick={() => setEditingBatchCardId(null)}
+                                         className="px-4 py-2 bg-emerald-500 hover:bg-emerald-600 text-white rounded-lg text-xs font-bold transition shadow-sm active:scale-95"
+                                       >
+                                         Lưu Thay Đổi Thẻ
+                                       </button>
+                                    </div>
+                                </div>
+                             ) : (
+                               <div className="flex justify-between items-start gap-3 w-full">
+                                 <div className="flex-1 min-w-0">
+                                    <div className="text-xs font-bold opacity-40 mb-1"># {idx + 1}</div>
+                                    <h4 className="font-bold line-clamp-1 text-sm">{card.front} {card.wordForm && <span className="opacity-50 font-normal italic">({card.wordForm})</span>}</h4>
+                                    <p className="text-xs opacity-70 line-clamp-2 mt-1">{card.back}</p>
+                                 </div>
+                                 <div className="flex flex-col gap-2 flex-shrink-0 opacity-0 group-hover:opacity-100 focus-within:opacity-100 transition">
+                                    <button 
+                                      onClick={() => setEditingBatchCardId(card.id)}
+                                      className="p-1.5 bg-amber-500/10 text-amber-600 dark:text-amber-500 hover:bg-amber-500 hover:text-white rounded-lg transition flex items-center justify-center transform active:scale-95"
+                                      title="Sửa thẻ"
+                                    >
+                                       <Edit3 className="w-4 h-4" />
+                                    </button>
+                                    <button 
+                                      onClick={() => handleRemoveFromBatch(card.id)}
+                                      className="p-1.5 bg-red-500/10 text-red-500 hover:bg-red-500 hover:text-white rounded-lg transition flex items-center justify-center transform active:scale-95"
+                                      title="Xóa thẻ"
+                                    >
+                                       <Trash2 className="w-4 h-4" />
+                                    </button>
+                                 </div>
+                               </div>
+                             )}
                           </motion.div>
                        ))
                     )}
