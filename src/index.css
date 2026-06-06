@@ -1,0 +1,253 @@
+@import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Playfair+Display:ital,wght@0,400;0,600;1,400;1,600&family=Inter:wght@400;500;600&display=swap');
+@import "tailwindcss";
+
+@custom-variant dark (&:is(.dark *));
+
+@theme {
+  --font-sans: Georgia, Cambria, "Times New Roman", Times, serif;
+  --font-display: Georgia, Cambria, "Times New Roman", Times, serif;
+  --font-roman: Georgia, Cambria, "Times New Roman", Times, serif;
+  --font-serif: Georgia, Cambria, "Times New Roman", Times, serif;
+
+  --color-gold-400: #eab308;
+  --color-gold-500: #d4af37;
+  --color-gold-600: #ca8a04;
+}
+
+@layer base {
+  body {
+    @apply antialiased min-h-screen font-sans;
+    @apply text-stone-800;
+    
+    background-color: #f3f4f6;
+    background-image: 
+      radial-gradient(at 40% 20%, hsla(28,100%,84%,0.8) 0px, transparent 50%),
+      radial-gradient(at 80% 0%, hsla(189,100%,86%,0.8) 0px, transparent 50%),
+      radial-gradient(at 0% 50%, hsla(355,100%,93%,0.8) 0px, transparent 50%),
+      radial-gradient(at 80% 50%, hsla(340,100%,86%,0.8) 0px, transparent 50%),
+      radial-gradient(at 0% 100%, hsla(22,100%,87%,0.8) 0px, transparent 50%),
+      radial-gradient(at 80% 100%, hsla(242,100%,80%,0.8) 0px, transparent 50%),
+      radial-gradient(at 0% 0%, hsla(343,100%,86%,0.8) 0px, transparent 50%);
+    background-size: 250% 250%;
+    animation: gradientFlow 20s ease infinite;
+
+    background-attachment: fixed;
+    will-change: background-position;
+  }
+  .dark body {
+    @apply text-stone-200;
+    
+    background-color: #050505;
+    background-image: 
+      radial-gradient(at 40% 20%, hsla(280,100%,10%,1) 0px, transparent 50%),
+      radial-gradient(at 80% 0%, hsla(189,100%,10%,1) 0px, transparent 50%),
+      radial-gradient(at 0% 50%, hsla(355,100%,10%,1) 0px, transparent 50%),
+      radial-gradient(at 80% 50%, hsla(340,100%,10%,1) 0px, transparent 50%),
+      radial-gradient(at 0% 100%, hsla(22,100%,10%,1) 0px, transparent 50%),
+      radial-gradient(at 80% 100%, hsla(242,100%,15%,1) 0px, transparent 50%),
+      radial-gradient(at 0% 0%, hsla(313,100%,10%,1) 0px, transparent 50%);
+    background-size: 250% 250%;
+    animation: gradientFlow 20s ease infinite;
+  }
+  
+  /* Disable heavy background loops on mobile to preserve battery & INP */
+  @media (max-width: 640px) {
+    body, .dark body {
+      animation: none !important;
+      background-position: center center !important;
+    }
+  }
+}
+
+@keyframes gradientFlow {
+  0% { background-position: 0% 0%; }
+  50% { background-position: 100% 100%; }
+  100% { background-position: 0% 0%; }
+}
+
+@keyframes shimmer {
+  0% { transform: translateX(-150%); }
+  100% { transform: translateX(150%); }
+}
+
+/* Custom Scrollbar */
+.custom-scrollbar::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+.custom-scrollbar::-webkit-scrollbar-track {
+  background: transparent;
+}
+.custom-scrollbar::-webkit-scrollbar-thumb {
+  background-color: rgba(156, 163, 175, 0.5);
+  border-radius: 10px;
+}
+.dark .custom-scrollbar::-webkit-scrollbar-thumb {
+  background-color: rgba(107, 114, 128, 0.5);
+}
+
+/* Theme Transition logic using View Transitions API */
+.theme-transition::view-transition-old(root),
+.theme-transition::view-transition-new(root) {
+  animation: none;
+  mix-blend-mode: normal;
+}
+.theme-transition::view-transition-old(root) {
+  z-index: 1;
+}
+.theme-transition::view-transition-new(root) {
+  z-index: 2;
+}
+
+/* Layer 1: Neumorphic / Glass Cards & Regions */
+/* Improved Glassmorphism with glowing border */
+.card-3d, .glass {
+  @apply relative text-left bg-white/40 dark:bg-black/40 backdrop-blur-xl transition-all duration-500 z-10 rounded-2xl;
+  border: 1px solid rgba(255, 255, 255, 0.4);
+  box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.05);
+  will-change: transform, box-shadow;
+}
+
+.dark .card-3d, .dark .glass {
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.4);
+}
+
+.card-3d::before, .glass::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(125deg, transparent 0%, rgba(255,255,255,0.2) 40%, transparent 100%);
+  z-index: -1;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.5s ease;
+  border-radius: inherit;
+}
+
+.dark .card-3d::before, .dark .glass::before {
+  background: linear-gradient(125deg, transparent 0%, rgba(255,255,255,0.05) 40%, transparent 100%);
+}
+
+
+.card-3d:hover::before, .glass:hover::before {
+  opacity: 1;
+}
+
+.card-3d:hover, .glass:hover {
+  @apply shadow-2xl;
+  transform: translateY(-6px) scale(1.02);
+}
+
+/* Layer 2: Animated Buttons */
+.btn-3d {
+  @apply relative overflow-hidden transform transition-all duration-300 ease-out active:duration-100 font-medium rounded-xl;
+  box-shadow: 0 4px 15px rgba(0,0,0,0.08);
+  will-change: transform, box-shadow;
+}
+
+.dark .btn-3d {
+  box-shadow: 0 4px 15px rgba(0,0,0,0.3);
+}
+
+.btn-3d::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(circle, rgba(255,255,255,0.3) 0%, transparent 70%);
+  opacity: 0;
+  transition: opacity 0.3s;
+  pointer-events: none;
+  border-radius: inherit;
+}
+
+.btn-3d:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 8px 25px rgba(0,0,0,0.12);
+}
+
+.dark .btn-3d:hover {
+  box-shadow: 0 8px 25px rgba(0,0,0,0.4);
+}
+
+.btn-3d:hover::after {
+  opacity: 1;
+}
+
+.btn-3d:active {
+  transform: translateY(2px) scale(0.97);
+  box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+}
+
+.dark .btn-3d:active {
+  box-shadow: 0 2px 10px rgba(0,0,0,0.2);
+}
+
+
+.btn-3d-primary {
+  background: linear-gradient(135deg, #3b82f6 0%, #8b5cf6 100%);
+  @apply text-white border-none;
+  box-shadow: 0 4px 15px rgba(59, 130, 246, 0.4) !important;
+  background-size: 200% 200%;
+  animation: gradientFlow 4s ease infinite;
+}
+
+.btn-3d-primary:hover {
+  box-shadow: 0 8px 30px rgba(139, 92, 246, 0.6) !important;
+  background-position: 100% 50%;
+}
+
+.btn-3d-primary:active {
+  box-shadow: 0 2px 10px rgba(59, 130, 246, 0.4) !important;
+}
+
+
+/* Inputs & Form Fields 3D effect */
+.input-3d {
+  @apply bg-white/60 dark:bg-zinc-900/60 backdrop-blur-lg border border-stone-200/50 dark:border-zinc-800/50 rounded-xl shadow-inner focus:shadow-lg transition-all duration-300 ease-out outline-none focus:ring-2 focus:ring-purple-500/50;
+  will-change: box-shadow, border-color;
+}
+
+/* Layer 3: Glass Modals (Highest Z-index) */
+.modal-glass-overlay {
+  @apply fixed inset-0 z-40 bg-white/20 dark:bg-black/60 backdrop-blur-md transition-all duration-300 ease-out;
+}
+.modal-glass-content {
+  @apply relative z-50 bg-white/85 dark:bg-zinc-950/85 backdrop-blur-2xl border border-white/60 dark:border-white/10 shadow-[0_30px_60px_-15px_rgba(0,0,0,0.3)] dark:shadow-[0_40px_80px_-20px_rgba(0,0,0,0.6)] transition-all duration-300 ease-out sm:rounded-[2rem] overflow-hidden;
+}
+
+/* 3D Flip Card CSS */
+.perspective-1000 {
+  perspective: 1500px;
+}
+.transform-style-3d {
+  transform-style: preserve-3d;
+  will-change: transform;
+}
+.backface-hidden {
+  backface-visibility: hidden;
+}
+.rotate-y-180 {
+  transform: rotateY(180deg);
+}
+
+/* Shimmer utility */
+.shimmer-bar {
+  position: relative;
+  overflow: hidden;
+}
+.shimmer-bar::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  background-image: linear-gradient(
+    90deg,
+    transparent,
+    rgba(255, 255, 255, 0.4),
+    transparent
+  );
+  animation: shimmer 2s infinite;
+}
